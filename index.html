@@ -231,6 +231,86 @@
 
         .textarea { resize: none; min-height: 100px; }
 
+        /* Poll Styles */
+        .poll-container {
+            margin-top: 16px;
+            padding: 16px;
+            background: var(--bg2);
+            border-radius: var(--radius-sm);
+        }
+
+        .poll-question {
+            font-weight: 600;
+            margin-bottom: 16px;
+            font-size: 15px;
+        }
+
+        .poll-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            background: var(--bg);
+            border: 1px solid var(--bg2);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .poll-option:hover {
+            border-color: var(--accent);
+        }
+
+        .poll-option.voted {
+            border-color: var(--accent);
+            background: var(--accent-light);
+        }
+
+        .poll-option-text {
+            flex: 1;
+            font-weight: 500;
+        }
+
+        .poll-option-votes {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--hint);
+            margin-left: 12px;
+        }
+
+        .poll-option.voted .poll-option-votes {
+            color: var(--accent);
+        }
+
+        .poll-progress {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            background: var(--accent-light);
+            transition: width 0.3s ease;
+            z-index: 1;
+        }
+
+        .poll-option-content {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .poll-total {
+            text-align: center;
+            margin-top: 12px;
+            font-size: 12px;
+            color: var(--hint);
+        }
+
         /* Poll Options */
         .poll-option-row {
             display: flex;
@@ -356,7 +436,26 @@
                 </div>
             </div>
 
-            <div style="white-space: pre-wrap; font-size: 15px; line-height: 1.5; color: var(--text);">{{ idea.content }}</div>
+            <div v-if="isPoll(idea)" class="poll-container">
+                <div class="poll-question">{{ getPollData(idea).question }}</div>
+                <div v-for="(option, idx) in getPollData(idea).options" :key="idx" 
+                     class="poll-option"
+                     :class="{ voted: hasVotedInPoll(idea, idx) }"
+                     @click="voteInPoll(idea, idx)">
+                    <div class="poll-progress" 
+                         :style="{ width: (getPollData(idea).votes[idx] / Math.max(1, getPollData(idea).votes.reduce((a,b) => a+b, 0)) * 100) + '%' }">
+                    </div>
+                    <div class="poll-option-content">
+                        <div class="poll-option-text">{{ option }}</div>
+                        <div class="poll-option-votes">{{ getPollData(idea).votes[idx] }}</div>
+                    </div>
+                </div>
+                <div class="poll-total">
+                    Всего голосов: {{ getPollData(idea).votes.reduce((a,b) => a+b, 0) }}
+                </div>
+            </div>
+
+            <div v-else style="white-space: pre-wrap; font-size: 15px; line-height: 1.5; color: var(--text);">{{ idea.content }}</div>
 
             <div style="margin-top: 16px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--bg2); padding-top: 12px;">
                 <button @click="vote(idea)" 
@@ -572,6 +671,71 @@ createApp({
 
         const hasLiked = (idea) => idea.liked_by?.includes(user.value?.id?.toString())
 
+        const isPoll = (idea) => {
+            try {
+                const parsed = JSON.parse(idea.content)
+                return parsed.question && parsed.options && Array.isArray(parsed.options)
+            } catch {
+                return false
+            }
+        }
+
+        const getPollData = (idea) => {
+            try {
+                return JSON.parse(idea.content)
+            } catch {
+                return null
+            }
+        }
+
+        const hasVotedInPoll = (idea, optionIndex) => {
+            const pollData = getPollData(idea)
+            if (!pollData || !pollData.voters) return false
+            return pollData.voters[optionIndex]?.includes(user.value?.id?.toString())
+        }
+
+        const voteInPoll = async (idea, optionIndex) => {
+            const pollData = getPollData(idea)
+            if (!pollData) return
+
+            const userId = user.value.id.toString()
+            const hasVoted = hasVotedInPoll(idea, optionIndex)
+
+            // Проверяем, голосовал ли уже в других вариантах
+            const votedOptionIndex = pollData.voters.findIndex(voters => voters.includes(userId))
+            
+            if (votedOptionIndex !== -1 && votedOptionIndex !== optionIndex) {
+                // Убираем голос из предыдущего варианта
+                pollData.votes[votedOptionIndex]--
+                pollData.voters[votedOptionIndex] = pollData.voters[votedOptionIndex].filter(id => id !== userId)
+            }
+
+            if (hasVoted) {
+                // Убираем голос
+                pollData.votes[optionIndex]--
+                pollData.voters[optionIndex] = pollData.voters[optionIndex].filter(id => id !== userId)
+            } else {
+                // Добавляем голос
+                pollData.votes[optionIndex]++
+                if (!pollData.voters[optionIndex]) pollData.voters[optionIndex] = []
+                pollData.voters[optionIndex].push(userId)
+            }
+
+            // Обновляем в базе
+            const { error } = await sb.from('ideas')
+                .update({ content: JSON.stringify(pollData) })
+                .eq('id', idea.id)
+
+            if (!error) {
+                // Обновляем локально
+                const idx = ideas.value.findIndex(i => i.id === idea.id)
+                if (idx !== -1) {
+                    ideas.value[idx].content = JSON.stringify(pollData)
+                }
+                tg.HapticFeedback.selectionChanged()
+            }
+        }
+
         const formatDate = (dateStr) => {
             const d = new Date(dateStr)
             return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
@@ -632,15 +796,21 @@ createApp({
 
             // Форматирование контента
             if (form.category === 'bug') {
-                finalContent = `🐛 **Сервис:** ${form.service}\n\n${finalContent}`
+                finalContent = `🐛 Сервис: ${form.service}\n\n${finalContent}`
             } else if (form.category === 'improvement') {
-                finalContent = `⚡ **Улучшить:** ${form.target}\n\n${finalContent}`
+                finalContent = `⚡ Улучшить: ${form.target}\n\n${finalContent}`
             } else if (form.category === 'mentor') {
-                finalContent = `👨‍🏫 **Сервис:** ${form.service}\n📌 **Тема:** ${form.title}\n\n${finalContent}`
+                finalContent = `👨‍🏫 Сервис: ${form.service}\n📌 Тема: ${form.title}\n\n${finalContent}`
             } else if (form.category === 'poll') {
                 const validOptions = form.options.filter(o => o.trim())
-                const optionsText = validOptions.map((o, i) => `${i + 1}. ${o}`).join('\n')
-                finalContent = `📊 **${finalContent}**\n\nВарианты ответов:\n${optionsText}`
+                // Сохраняем опции как JSON для интерактивности
+                const pollData = {
+                    question: finalContent,
+                    options: validOptions,
+                    votes: validOptions.map(() => 0),
+                    voters: validOptions.map(() => [])
+                }
+                finalContent = JSON.stringify(pollData)
             }
 
             const catObj = categories.find(c => c.id === form.category)
@@ -698,7 +868,8 @@ createApp({
             user, ideas, sortedIdeas, loading, form, categories, serviceList,
             showModal, isSubmitting, totalVotes, topIdeasCount, canSubmit, getPlaceholder,
             openModal, closeModal, setCategory, addOption, removeOption,
-            vote, hasLiked, submitIdea, formatDate, getCategoryIcon
+            vote, hasLiked, submitIdea, formatDate, getCategoryIcon,
+            isPoll, getPollData, hasVotedInPoll, voteInPoll
         }
     }
 }).mount('#app')
