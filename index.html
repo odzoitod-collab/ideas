@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>IRL Team Ideas</title>
+    
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --tg-bg: var(--tg-theme-bg-color, #ffffff);
+            --tg-text: var(--tg-theme-text-color, #000000);
+            --tg-hint: var(--tg-theme-hint-color, #707579);
+            --tg-link: var(--tg-theme-link-color, #3390ec);
+            --tg-btn: var(--tg-theme-button-color, #3390ec);
+            --tg-btn-text: var(--tg-theme-button-text-color, #ffffff);
+            --tg-secondary-bg: var(--tg-theme-secondary-bg-color, #f4f4f5);
+            --accent: #8b5cf6;
+            --accent-light: #a78bfa;
+            --gradient-start: #8b5cf6;
+            --gradient-end: #06b6d4;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: var(--tg-secondary-bg);
+            color: var(--tg-text);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+            min-height: 100vh;
+        }
+
+        ::-webkit-scrollbar { width: 0; height: 0; }
+
+        .list-enter-active, .list-leave-active, .list-move {
+            transition: all 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        .list-enter-from, .list-leave-to {
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
+        }
+        .list-leave-active { position: absolute; width: calc(100% - 32px); }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .glass { background: rgba(30, 30, 30, 0.85); }
+        }
+
+        .heart-bounce { animation: heartBounce 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes heartBounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.35); }
+        }
+
+        .pulse-ring {
+            animation: pulseRing 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+        }
+        @keyframes pulseRing {
+            0% { transform: scale(0.8); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        .float { animation: float 3s ease-in-out infinite; }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .gradient-border {
+            position: relative;
+            background: var(--tg-bg);
+            border-radius: 20px;
+        }
+        .gradient-border::before {
+            content: '';
+            position: absolute;
+            inset: -2px;
+            border-radius: 22px;
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            z-index: -1;
+            opacity: 0.5;
+        }
+
+        .card {
+            background: var(--tg-bg);
+            border-radius: 20px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+        }
+        .card:active { transform: scale(0.98); }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            color: white;
+            border: none;
+            border-radius: 14px;
+            padding: 12px 24px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px rgba(139, 92, 246, 0.3);
+        }
+        .btn-primary:active { transform: scale(0.95); }
+        .btn-primary:disabled { opacity: 0.5; transform: none; }
+
+        .avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid transparent;
+            background: linear-gradient(var(--tg-bg), var(--tg-bg)) padding-box,
+                        linear-gradient(135deg, var(--gradient-start), var(--gradient-end)) border-box;
+        }
+
+        .avatar-sm {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-hot {
+            background: linear-gradient(135deg, #f97316, #ef4444);
+            color: white;
+        }
+
+        .badge-new {
+            background: linear-gradient(135deg, #10b981, #06b6d4);
+            color: white;
+        }
+
+        .like-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: none;
+        }
+
+        .like-btn.liked {
+            background: linear-gradient(135deg, #ec4899, #f43f5e);
+            color: white;
+            box-shadow: 0 4px 16px rgba(236, 72, 153, 0.3);
+        }
+
+        .like-btn.not-liked {
+            background: var(--tg-secondary-bg);
+            color: var(--tg-hint);
+        }
+
+        .skeleton {
+            background: linear-gradient(90deg, var(--tg-secondary-bg) 25%, rgba(255,255,255,0.3) 50%, var(--tg-secondary-bg) 75%);
+            background-size: 200% 100%;
+            animation: skeleton 1.5s infinite;
+            border-radius: 8px;
+        }
+        @keyframes skeleton {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .input-area {
+            background: var(--tg-secondary-bg);
+            border: 2px solid transparent;
+            border-radius: 16px;
+            transition: all 0.3s ease;
+        }
+        .input-area:focus-within {
+            border-color: var(--accent);
+            background: var(--tg-bg);
+        }
+
+        .stats-card {
+            background: linear-gradient(135deg, var(--gradient-start), var(--gradient-end));
+            border-radius: 16px;
+            padding: 16px;
+            color: white;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+        }
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 16px;
+            opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <!-- Header -->
+    <header class="fixed top-0 left-0 right-0 z-50 glass">
+        <div class="max-w-lg mx-auto px-4 py-3">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="relative">
+                        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-violet-500 to-cyan-500 flex items-center justify-center shadow-lg">
+                            <span class="text-white font-bold text-lg">💡</span>
+                        </div>
+                        <div class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-white"></div>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg gradient-text">IRL Ideas</h1>
+                        <p class="text-xs text-[var(--tg-hint)]">{{ ideas.length }} идей от команды</p>
+                    </div>
+                </div>
+                
+                <div v-if="user" class="flex items-center gap-2">
+                    <div class="text-right mr-2 hidden sm:block">
+                        <p class="text-sm font-semibold">{{ user.first_name }}</p>
+                        <p class="text-xs text-[var(--tg-hint)]">@{{ user.username || 'user' }}</p>
+                    </div>
+                    <img :src="userAvatar" class="avatar" :alt="user.first_name">
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="h-20"></div>
+
+    <main class="max-w-lg mx-auto px-4 pb-8">
+        <!-- Stats -->
+        <div class="stats-card mb-6 float">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-white/70 text-xs font-medium mb-1">Всего идей</p>
+                    <p class="text-3xl font-bold">{{ ideas.length }}</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-white/70 text-xs font-medium mb-1">Всего голосов</p>
+                    <p class="text-3xl font-bold">{{ totalVotes }}</p>
+                </div>
+                <div class="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center">
+                    <span class="text-3xl">🚀</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- New Idea Form -->
+        <div class="card p-4 mb-6">
+            <div class="flex gap-3 mb-3">
+                <img :src="userAvatar" class="avatar-sm flex-shrink-0">
+                <div class="flex-1">
+                    <p class="font-semibold text-sm">{{ user?.first_name || 'Аноним' }}</p>
+                    <p class="text-xs text-[var(--tg-hint)]">Поделись идеей с командой</p>
+                </div>
+            </div>
+            
+            <div class="input-area p-3 mb-3">
+                <textarea 
+                    v-model="newIdeaContent"
+                    placeholder="💭 Какую идею или сервис добавить?"
+                    class="w-full bg-transparent border-none outline-none resize-none text-sm min-h-[80px]"
+                    :style="{ color: 'var(--tg-text)' }"
+                ></textarea>
+            </div>
+            
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-[var(--tg-hint)]">{{ newIdeaContent.length }}/500</span>
+                </div>
+                <button 
+                    @click="addIdea" 
+                    :disabled="!newIdeaContent.trim() || isSubmitting || newIdeaContent.length > 500"
+                    class="btn-primary flex items-center gap-2"
+                >
+                    <span v-if="isSubmitting" class="flex items-center gap-2">
+                        <svg class="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                        </svg>
+                        Отправка...
+                    </span>
+                    <span v-else class="flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                        </svg>
+                        Опубликовать
+                    </span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Section Title -->
+        <div class="flex items-center justify-between mb-4 px-1">
+            <h2 class="font-bold text-lg flex items-center gap-2">
+                <span class="text-2xl">🔥</span>
+                Топ идей
+            </h2>
+            <div class="badge badge-hot">
+                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z" clip-rule="evenodd"/>
+                </svg>
+                HOT
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div v-if="loading" class="space-y-4">
+            <div v-for="i in 3" :key="i" class="card p-4">
+                <div class="flex gap-3 mb-3">
+                    <div class="w-10 h-10 rounded-full skeleton"></div>
+                    <div class="flex-1 space-y-2">
+                        <div class="h-4 skeleton w-1/3"></div>
+                        <div class="h-3 skeleton w-1/4"></div>
+                    </div>
+                </div>
+                <div class="h-16 skeleton mb-3"></div>
+                <div class="h-10 skeleton w-24"></div>
+            </div>
+        </div>
+
+        <!-- Ideas List -->
+        <transition-group name="list" tag="div" class="space-y-4 relative">
+            <div v-for="(idea, index) in sortedIdeas" :key="idea.id" class="card p-4 relative overflow-hidden">
+                <!-- Top Badge -->
+                <div v-if="index < 3 && idea.votes_count > 0" class="absolute top-3 right-3">
+                    <div v-if="index === 0" class="badge badge-hot">🥇 #1</div>
+                    <div v-else-if="index === 1" class="badge" style="background: linear-gradient(135deg, #94a3b8, #64748b); color: white;">🥈 #2</div>
+                    <div v-else class="badge" style="background: linear-gradient(135deg, #d97706, #b45309); color: white;">🥉 #3</div>
+                </div>
+
+                <!-- New Badge -->
+                <div v-if="isNew(idea.created_at)" class="absolute top-3 right-3">
+                    <div class="badge badge-new">✨ NEW</div>
+                </div>
+
+                <!-- Author -->
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-violet-400 to-cyan-400 flex items-center justify-center text-white font-bold shadow-md">
+                        {{ idea.user_name[0].toUpperCase() }}
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="font-semibold text-sm">{{ idea.user_name }}</h3>
+                        <p class="text-xs text-[var(--tg-hint)]">{{ formatDate(idea.created_at) }}</p>
+                    </div>
+                </div>
+
+                <!-- Content -->
+                <p class="text-sm leading-relaxed mb-4 whitespace-pre-wrap" :style="{ color: 'var(--tg-text)' }">
+                    {{ idea.content }}
+                </p>
+
+                <!-- Actions -->
+                <div class="flex items-center justify-between pt-3 border-t" style="border-color: var(--tg-secondary-bg)">
+                    <button 
+                        @click="vote(idea)" 
+                        class="like-btn"
+                        :class="hasLiked(idea) ? 'liked' : 'not-liked'"
+                    >
+                        <svg 
+                            xmlns="http://www.w3.org/2000/svg" 
+                            class="h-5 w-5 transition-transform"
+                            :class="{'heart-bounce': hasLiked(idea)}"
+                            :fill="hasLiked(idea) ? 'currentColor' : 'none'"
+                            viewBox="0 0 24 24" 
+                            stroke="currentColor" 
+                            stroke-width="2"
+                        >
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                        </svg>
+                        <span>{{ idea.votes_count }}</span>
+                    </button>
+
+                    <div v-if="idea.votes_count >= 5" class="flex items-center gap-1 text-xs font-medium text-orange-500">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z" clip-rule="evenodd"/>
+                        </svg>
+                        Популярно
+                    </div>
+                </div>
+            </div>
+        </transition-group>
+
+        <!-- Empty State -->
+        <div v-if="!loading && ideas.length === 0" class="empty-state">
+            <div class="w-24 h-24 mx-auto mb-4 rounded-full bg-gradient-to-br from-violet-100 to-cyan-100 flex items-center justify-center">
+                <span class="text-5xl">💡</span>
+            </div>
+            <h3 class="font-bold text-lg mb-2">Пока нет идей</h3>
+            <p class="text-sm text-[var(--tg-hint)]">Будь первым! Поделись своей идеей с командой</p>
+        </div>
+    </main>
+
+    <!-- Bottom Safe Area -->
+    <div class="h-8"></div>
+</div>
+
+<script>
+const { createApp, ref, computed, onMounted } = Vue
+const { createClient } = supabase
+
+const SUPABASE_URL = 'https://sqoehqvvrbbgaqvkniyw.supabase.co'
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxb2VocXZ2cmJiZ2FxdmtuaXl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY5ODkzODUsImV4cCI6MjA4MjU2NTM4NX0.-Qam5GFLwzFCvM2MrEYv3HbLeRYUPOLPnLRqcLPcasg'
+
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+createApp({
+    setup() {
+        const ideas = ref([])
+        const loading = ref(true)
+        const newIdeaContent = ref('')
+        const isSubmitting = ref(false)
+        const user = ref(null)
+
+        const tg = window.Telegram.WebApp
+
+        const userAvatar = computed(() => {
+            if (user.value?.photo_url) return user.value.photo_url
+            const name = user.value?.first_name || 'User'
+            return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=8b5cf6&color=fff&bold=true`
+        })
+
+        const totalVotes = computed(() => {
+            return ideas.value.reduce((sum, idea) => sum + (idea.votes_count || 0), 0)
+        })
+
+        onMounted(async () => {
+            tg.ready()
+            tg.expand()
+            tg.enableClosingConfirmation()
+            
+            // Set header color
+            tg.setHeaderColor('#8b5cf6')
+            tg.setBackgroundColor('#f4f4f5')
+
+            if (tg.initDataUnsafe?.user) {
+                user.value = tg.initDataUnsafe.user
+            } else {
+                user.value = {
+                    id: 999999,
+                    first_name: "Тест",
+                    last_name: "Юзер",
+                    username: "testuser",
+                    photo_url: null
+                }
+            }
+
+            await fetchIdeas()
+            
+            sb.channel('public:ideas')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'ideas' }, handleRealtime)
+                .subscribe()
+        })
+
+        const fetchIdeas = async () => {
+            const { data, error } = await sb
+                .from('ideas')
+                .select('*')
+                .order('votes_count', { ascending: false })
+            
+            if (!error) ideas.value = data || []
+            loading.value = false
+        }
+
+        const handleRealtime = (payload) => {
+            if (payload.eventType === 'INSERT') {
+                ideas.value.unshift(payload.new)
+            } else if (payload.eventType === 'UPDATE') {
+                const index = ideas.value.findIndex(i => i.id === payload.new.id)
+                if (index !== -1) ideas.value[index] = payload.new
+            } else if (payload.eventType === 'DELETE') {
+                ideas.value = ideas.value.filter(i => i.id !== payload.old.id)
+            }
+        }
+
+        const addIdea = async () => {
+            if (!newIdeaContent.value.trim() || newIdeaContent.value.length > 500) return
+            isSubmitting.value = true
+
+            tg.HapticFeedback.impactOccurred('medium')
+
+            const newIdea = {
+                user_id: user.value.id.toString(),
+                user_name: user.value.username ? `@${user.value.username}` : user.value.first_name,
+                content: newIdeaContent.value.trim(),
+                votes_count: 0,
+                liked_by: []
+            }
+
+            const { error } = await sb.from('ideas').insert(newIdea)
+
+            if (error) {
+                tg.showAlert('Ошибка: ' + error.message)
+            } else {
+                newIdeaContent.value = ''
+                tg.HapticFeedback.notificationOccurred('success')
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+            }
+            isSubmitting.value = false
+        }
+
+        const vote = async (idea) => {
+            tg.HapticFeedback.selectionChanged()
+
+            const { error } = await sb.rpc('toggle_vote', {
+                row_id: idea.id,
+                user_tg_id: user.value.id.toString()
+            })
+
+            if (error) {
+                console.error(error)
+                tg.showAlert('Ошибка при голосовании')
+            }
+        }
+
+        const hasLiked = (idea) => {
+            return idea.liked_by?.includes(user.value?.id?.toString())
+        }
+
+        const isNew = (dateStr) => {
+            const date = new Date(dateStr)
+            const now = new Date()
+            const diffHours = (now - date) / (1000 * 60 * 60)
+            return diffHours < 24
+        }
+
+        const sortedIdeas = computed(() => {
+            return [...ideas.value].sort((a, b) => b.votes_count - a.votes_count)
+        })
+
+        const formatDate = (dateStr) => {
+            const date = new Date(dateStr)
+            const now = new Date()
+            const diffMs = now - date
+            const diffMins = Math.floor(diffMs / 60000)
+            const diffHours = Math.floor(diffMs / 3600000)
+            const diffDays = Math.floor(diffMs / 86400000)
+
+            if (diffMins < 1) return 'Только что'
+            if (diffMins < 60) return `${diffMins} мин назад`
+            if (diffHours < 24) return `${diffHours} ч назад`
+            if (diffDays < 7) return `${diffDays} дн назад`
+            
+            return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+        }
+
+        return {
+            ideas, sortedIdeas, loading, newIdeaContent, isSubmitting, user, userAvatar, totalVotes,
+            addIdea, vote, hasLiked, isNew, formatDate
+        }
+    }
+}).mount('#app')
+</script>
+</body>
+</html>
